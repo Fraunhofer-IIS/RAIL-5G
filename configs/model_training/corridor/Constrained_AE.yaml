@@ -1,0 +1,126 @@
+# @package _global_
+
+smoothing_type: kernel_moving_average
+smoothing_params:
+  kernel_size_mag: 10
+  kernel_size_phase: 10
+  mode: mean
+  min_valid_samples: 1
+  max_time_diff: 0.1
+norm: unit
+norm_range: self
+align_tdoa: true
+tdoa_correction:
+  kernel_size: 10
+  max_time_diff: 0.1
+  filter_type: median
+dataset_config:
+  train:
+    dataset_type: FingerprintingDataset
+    dataset_params:
+      file_path: ./data/corridor_train.h5
+      smoothing_type: ${smoothing_type}
+      smoothing_params: ${smoothing_params}
+      norm: ${norm}
+      norm_range: ${norm_range}
+      tdoa_correction: ${tdoa_correction}
+      align_tdoa: ${align_tdoa}
+      augmentations:
+      - augmentation_name: IQToAbs
+        augmentation_params:
+          keep_iq: false
+eval_config:
+  train:
+    output_path: ${output_dir}/train
+    dataset_config:
+      dataset_type: FingerprintingDataset
+      dataset_params:
+        file_path: ./data/corridor_train.h5
+        smoothing_type: ${smoothing_type}
+        smoothing_params: ${smoothing_params}
+        norm: ${norm}
+        norm_range: ${norm_range}
+        tdoa_correction: ${tdoa_correction}
+        align_tdoa: ${align_tdoa}
+        augmentations:
+        - augmentation_name: IQToAbs
+          augmentation_params:
+            keep_iq: false
+  test:
+    output_path: ${output_dir}/test
+    dataset_config:
+      dataset_type: FingerprintingDataset
+      dataset_params:
+        file_path: ./data/corridor_test.h5
+        smoothing_type: ${smoothing_type}
+        smoothing_params: ${smoothing_params}
+        norm: ${norm}
+        norm_range: ${norm_range}
+        tdoa_correction: ${tdoa_correction}
+        align_tdoa: ${align_tdoa}
+        augmentations:
+        - augmentation_name: IQToAbs
+          augmentation_params:
+            keep_iq: false
+model_config:
+  model_type: AutoencoderModel
+  model_params:
+    backbone_type: ${backbone_config.backbone_type}
+    backbone_params: ${backbone_config.backbone_params}
+    criterion_type: MSE
+    optim_config: ${training_config.optimizer_config}
+    decoder_type: MLP
+    model_type: vae
+    vae_beta: 0.0001
+    decoder_params:
+      layer:
+      - 64
+      - 128
+      - 256
+      - 512
+      - 1024
+    regularization_type: FRD
+    regularization_weight: 0.001
+    regularization_max_time_diff: 3
+backbone_config:
+  backbone_type: MLP
+  backbone_params:
+    layer:
+    - 444
+    - 1024
+    - 512
+    - 256
+    norm: false
+    dropout: 0.2
+dataloader_config:
+  train:
+    num_workers: 8
+    persistent_workers: true
+    shuffle: true
+    batch_size: 1024
+  eval:
+    num_workers: 8
+    persistent_workers: true
+    shuffle: false
+    batch_size: 4096
+training_config:
+  optimizer_config:
+    optimizer_type: AdamW
+    optimizer_params:
+      lr: 0.0001
+    lr_scheduler_type: CosineWithWarmupLR
+    lr_scheduler_params:
+      start_factor: 0.1
+      warmup_epochs: 5
+      T_max: ${trainer_config.max_epochs}
+trainer_config:
+  max_epochs: 100
+  accelerator: gpu
+  precision: 32-true
+  deterministic: true
+logger_config:
+  logger_type: TensorBoardLogger
+  logger_params:
+    save_dir: ./training_logs/corridor/Constrained_AE
+output_dir: ./experiments/corridor/Constrained_AE/${now:%Y-%m-%d_%H-%M-%S}
+seed: 54320

@@ -1,0 +1,141 @@
+# @package _global_
+
+smoothing_type: kernel_moving_average
+smoothing_params:
+  kernel_size_mag: 10
+  kernel_size_phase: 10
+  mode: mean
+  min_valid_samples: 1
+  max_time_diff: 0.1
+norm: unit
+norm_range: self
+align_tdoa: true
+tdoa_correction:
+  kernel_size: 10
+  max_time_diff: 0.1
+  filter_type: median
+dataset_config:
+  train:
+    dataset_type: GDMDataset
+    dataset_params:
+      file_path: ./data/full_small_cira/cc.h5
+      base_dataset_type: FingerprintingDataset
+      base_dataset_params:
+        smoothing_type: ${smoothing_type}
+        smoothing_params: ${smoothing_params}
+        norm: ${norm}
+        norm_range: ${norm_range}
+        tdoa_correction: ${tdoa_correction}
+        align_tdoa: ${align_tdoa}
+        augmentations:
+        - augmentation_name: IQToAbs
+          augmentation_params:
+            keep_iq: false
+      gdm_params:
+        bias: -0.1
+        slope: 0.2
+        var_factor: 0.1
+        saturation_threshold: 2.0
+        velocity_mean: 1
+        velocity_variance: 0.2
+        enable_path_contraction: true
+        total_path_count: 40000
+        realization_count: 8
+        variance_scale: 0.1
+      training_params:
+        training_batches: 3000
+        min_batch_size: 500
+        max_batch_size: 4000
+        min_hoplength: 1
+        max_hoplength: 20
+        path_worker_count: 12
+        randomize_pathhops: false
+        max_pathhops: 100
+eval_config:
+  train:
+    output_path: ${output_dir}/train
+    dataset_config:
+      dataset_type: FingerprintingDataset
+      dataset_params:
+        file_path: ./data/full_small_train.h5
+        smoothing_type: ${smoothing_type}
+        smoothing_params: ${smoothing_params}
+        norm: ${norm}
+        norm_range: ${norm_range}
+        tdoa_correction: ${tdoa_correction}
+        align_tdoa: ${align_tdoa}
+        augmentations:
+        - augmentation_name: IQToAbs
+          augmentation_params:
+            keep_iq: false
+  test:
+    output_path: ${output_dir}/test
+    dataset_config:
+      dataset_type: FingerprintingDataset
+      dataset_params:
+        file_path: ./data/full_test.h5
+        smoothing_type: ${smoothing_type}
+        smoothing_params: ${smoothing_params}
+        norm: ${norm}
+        norm_range: ${norm_range}
+        tdoa_correction: ${tdoa_correction}
+        align_tdoa: ${align_tdoa}
+        augmentations:
+        - augmentation_name: IQToAbs
+          augmentation_params:
+            keep_iq: false
+dataloader_config:
+  train:
+    num_workers: 0
+    persistent_workers: false
+    shuffle: true
+    batch_size: 1
+  eval:
+    num_workers: 8
+    persistent_workers: true
+    shuffle: false
+    batch_size: 4096
+model_config:
+  model_type: GDMModel
+  model_params:
+    backbone_type: ${backbone_config.backbone_type}
+    backbone_params: ${backbone_config.backbone_params}
+    optim_config: ${training_config.optimizer_config}
+    plot_cc: true
+    plot_cc_period: 3000
+    plot_cc_paths_to_plot_count: 50
+    criterion_params:
+      acceleration_variance: 0.5
+      acceleration_weight: 0.005
+      triangle_penalty_weight: 0.001
+backbone_config:
+  backbone_type: MLP
+  backbone_params:
+    layer:
+    - 444
+    - 1024
+    - 512
+    - 256
+    norm: false
+    dropout: 0.2
+training_config:
+  optimizer_config:
+    optimizer_type: AdamW
+    optimizer_params:
+      lr: 0.001
+    lr_scheduler_type: CosineWithWarmupLR
+    lr_scheduler_params:
+      start_factor: 0.1
+      warmup_epochs: 3
+      T_max: ${trainer_config.max_epochs}
+trainer_config:
+  max_epochs: 10
+  accelerator: gpu
+  precision: 32-true
+  deterministic: true
+logger_config:
+  logger_type: TensorBoardLogger
+  logger_params:
+    save_dir: training_logs/full/UAGeo
+output_dir: ./experiments/full/UAGeo/${now:%Y-%m-%d_%H-%M-%S}
+seed: 27996

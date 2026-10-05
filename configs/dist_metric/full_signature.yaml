@@ -1,0 +1,21 @@
+eval_only: false
+metric:
+  metric_name: signature
+  metric_params:
+    antenna_aggregation: mean
+  geodesic: false
+dataset_config:
+  file_path: ./data/full_train.h5
+  reduction_factor: 10
+  smoothing_type: kernel_moving_average
+  smoothing_params:
+    kernel_size_mag: 100
+    kernel_size_phase: 100
+    max_time_diff: 0.1
+  norm: unit
+  norm_range: self
+  align_tdoa: true
+  tdoa_correction:
+    kernel_size: 500
+    max_time_diff: 0.1
+output_dir: ./data/full_signature
